@@ -1,0 +1,100 @@
+[
+	{
+		"OUTLOOK": "sunny",
+		"TEMPERATURE": "85",
+		"HUMIDITY": "85",
+		"WINDY": "false",
+		"PLAY": "no"
+	},
+	{
+		"OUTLOOK": "sunny",
+		"TEMPERATURE": "80",
+		"HUMIDITY": "90",
+		"WINDY": "true",
+		"PLAY": "no"
+	},
+	{
+		"OUTLOOK": "overcast",
+		"TEMPERATURE": "83",
+		"HUMIDITY": "78",
+		"WINDY": "false",
+		"PLAY": "yes"
+	},
+	{
+		"OUTLOOK": "rain",
+		"TEMPERATURE": "70",
+		"HUMIDITY": "96",
+		"WINDY": "false",
+		"PLAY": "yes"
+	},
+	{
+		"OUTLOOK": "rain",
+		"TEMPERATURE": "68",
+		"HUMIDITY": "80",
+		"WINDY": "false",
+		"PLAY": "yes"
+	},
+	{
+		"OUTLOOK": "rain",
+		"TEMPERATURE": "65",
+		"HUMIDITY": "70",
+		"WINDY": "true",
+		"PLAY": "no"
+	},
+	{
+		"OUTLOOK": "overcast",
+		"TEMPERATURE": "64",
+		"HUMIDITY": "65",
+		"WINDY": "true",
+		"PLAY": "yes"
+	},
+	{
+		"OUTLOOK": "sunny",
+		"TEMPERATURE": "72",
+		"HUMIDITY": "95",
+		"WINDY": "false",
+		"PLAY": "no"
+	},
+	{
+		"OUTLOOK": "sunny",
+		"TEMPERATURE": "69",
+		"HUMIDITY": "70",
+		"WINDY": "false",
+		"PLAY": "yes"
+	},
+	{
+		"OUTLOOK": "rain",
+		"TEMPERATURE": "75",
+		"HUMIDITY": "80",
+		"WINDY": "false",
+		"PLAY": "yes"
+	},
+	{
+		"OUTLOOK": "sunny",
+		"TEMPERATURE": "75",
+		"HUMIDITY": "70",
+		"WINDY": "true",
+		"PLAY": "yes"
+	},
+	{
+		"OUTLOOK": "overcast",
+		"TEMPERATURE": "72",
+		"HUMIDITY": "90",
+		"WINDY": "true",
+		"PLAY": "yes"
+	},
+	{
+		"OUTLOOK": "overcast",
+		"TEMPERATURE": "81",
+		"HUMIDITY": "75",
+		"WINDY": "false",
+		"PLAY": "yes"
+	},
+	{
+		"OUTLOOK": "rain",
+		"TEMPERATURE": "71",
+		"HUMIDITY": "80",
+		"WINDY": "true",
+		"PLAY": "no"
+	}
+]
