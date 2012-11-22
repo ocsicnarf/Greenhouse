@@ -13,12 +13,14 @@ function Node(data, label, attrs) {
 		throw Error('Node(): label is also listed as an attribute.');
 	if (attrs && attrs.some(function(a) { return d3.keys(data[0]).indexOf(a) < 0; }))
 		throw Error('Node(): all attributes must be contained in the data.')
-		
+	if (attrs && attrs.some(function(a) { return attrs.indexOf(a) !== attrs.lastIndexOf(a)}))
+		throw Error('Node(): there are duplicated attributes.')
+	
 	this.data = data;
 	this.label = label;
 	if (typeof attrs === 'undefined') {
-		console.log('Attributes will be inferred from data');	
 		this.attrs = d3.keys(data[0]);
+		console.log('Node(): Attributes inferred from data.');	
 	} else {
 		this.attrs = attrs;
 	}
@@ -35,6 +37,11 @@ function Node(data, label, attrs) {
 		return d3.sum(entropyTerms);
 	}
 
+	this.split = function(attr) {
+		if (this.attrs.indexOf(attr) < 0) 
+			throw Error('Node.split(): invalid attribute to split on.')
+		
+	}
 }
 
 
@@ -51,6 +58,7 @@ d3.json('tennis.json', function(data) {
 	//Node(data, 'NONSENSE');
 	//Node(data, 'PLAY', ['NONSENSE']);
 	//Node(data, 'PLAY', ['PLAY', 'HUMIDITY']);
+	//Node(data, 'PLAY', ['HUMIDITY', 'WINDY', 'HUMIDITY']);
 	root = new Node(data, 'PLAY');
 	console.log(root.entropy())
 });
