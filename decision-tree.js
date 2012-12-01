@@ -1,136 +1,133 @@
-function Node(data, label, attrs) {
-	if (typeof data === 'undefined') 
-		throw Error('Node(): data is required.');
-	if (typeof label === 'undefined') 
-		throw Error('Node(): label is required.');
-	if (data.length < 1) 
-		throw Error('Node(): data cannot be empty');
-	if (d3.keys(data[0]).indexOf(label) < 0)
-		throw Error('Node(): label must be contained in the data.')
-	if (attrs && attrs.indexOf(label) >= 0) 
-		throw Error('Node(): label is also listed as an attribute.');
-	if (attrs && attrs.some(function (a) { return d3.keys(data[0]).indexOf(a) < 0; }))
-		throw Error('Node(): all attributes must be contained in the data.')
-	if (attrs && attrs.some(function (a) { return attrs.indexOf(a) !== attrs.lastIndexOf(a)}))
-		throw Error('Node(): there are duplicated attributes.')
-	
-	this.data = data;
-	this.label = label;
-	if (typeof attrs === 'undefined') {
-		var attrs = d3.keys(data[0]);
-		console.log('Node(): Attributes will be inferred from data.');	
-	} 
-	this.attrs = attrs.filter(function (a) { return a !== label });
-
-	function isContinuous(attr) {
-		return (typeof data[0][attr] === 'number')
-	}
-		
-	function computeEntropy(data, label) {
-		var total = data.length;
-		var frequencies = d3.nest()
-			.key(function (d) { return d[label]; })
-			.rollup(function (g) { return g.length / total; })
-			.entries(data);
-		var entropyTerms = frequencies.map(function (d) { 
-			return -d.values * Math.LOG2E * Math.log(d.values);
-		});
-		return d3.sum(entropyTerms);
-	}
-	
-	function computeGain(parent, children) {
-		var total = parent.data.length;
-		var childNodes = children.values();
-		var weightedEntropies = childNodes.map(function (node) {
-			return (node.data.length / total) * node.entropy;
-		});
-		return parent.entropy - d3.sum(weightedEntropies);
-	}
-	
-	function computeChildren(parent, attr, value) {	
-		var subsets;
-		if (isContinuous(attr)) {
-			subsets = new d3.map();
-			subsets.set('left', parent.data.filter(function (d) { return d[attr] <= value; }));
-			subsets.set('right', parent.data.filter(function (d) { return d[attr] > value; }));
-		} else {
-			subsets = new d3.map(d3.nest()
-				.key(function(d) { return d[attr]; })
-				.map(parent.data));
-		}
-		var childAttrs = parent.attrs.filter(function (a) { return a !== attr });
-		var children = new d3.map()
-		subsets.forEach(function(attrValue, subset) {
-			children.set(attrValue, new Node(subset, parent.label, childAttrs));
-		});
-		return children;
-	}
-	
-	function findBestSplitValue(parent, attr) {		
-		if (isContinuous(attr)) {
-			var values = d3.values(d3.nest()
-				.key(function (d) { return d[attr]; })
-				.rollup( function(g) { return g[0][attr]; })
-				.map(parent.data));
-			values.splice(-1); // we will not use largest value to split
-			var gains = values.map(function (v) { 
-				var children = computeChildren(parent, attr, v);
-				return computeGain(parent, children);
+(function() {
+	function dtree_node() {
+		var _data,
+			_label,
+			_attrs,
+			_split,
+			_children;
+			
+		function entropy(data, label) {
+			if (!data.length) return 0;
+			var frequencies = d3.nest()
+				.key(function (d) { return d[label]; })
+				.rollup(function (g) {return g.length / data.length; })
+				.entries(data);
+			var entropyTerms = frequencies.map(function (d) {
+				return -d.values * Math.LOG2E * Math.log(d.values);
 			});
-			return values[gains.indexOf(d3.max(gains))];
-		} else { 
-			// do nothing so return value is undefined
+			return d3.sum(entropyTerms);
 		}
-	}
-	
-	this.entropy = computeEntropy(this.data, this.label);
-	this.isLeaf = (this.entropy == 0 || this.attrs.length == 0);
-
-	this.split = function(attr, value) {
-		if (this.attrs.indexOf(attr) < 0) 
-			throw Error('Node.split(): ' + attr + ' is not an attribute.');
-		if (!isContinuous(attr) && typeof value !== 'undefined') 
-			console.log('Node.split(): splitting on a discrete attribute, provided split value will be ignored.');
-		if (isContinuous(attr) && typeof value === 'undefined') {
-			console.log('Node.split(): splitting on a continuous attribute, but no split value provided, so using optimal value.');
-			value = findBestSplitValue(this, attr);
-		}
-
-		this.children = computeChildren(this, attr, value);
-		return this.children;
-	}
 		
-	this.bestSplit = function() {
-		var parent = this;
-		var bestValues = new d3.map()
-		var gains = this.attrs.map(function (a) {
-			bestValues.set(a, findBestSplitValue(parent, a));
-			var children = computeChildren(parent, a, bestValues.get(a));
-			return computeGain(parent, children);
-		});
-		var bestAttr = this.attrs[gains.indexOf(d3.max(gains))];
-		return this.split(bestAttr, bestValues.get(bestAttr)); 
-	}
-	
-	this.computeGain = function() {
-		if (typeof this.children === 'undefined') 
-			throw Error('Node.computeGain(): must call Node.split() before computing gain')
-		return computeGain(this, this.children);
-	}
-	
-	this.buildTree = function() {
-		var queue = [this]
-		while (queue.length > 0) {
-			var next = queue.shift();
-			if (!next.isLeaf) {
-				var children = next.bestSplit();
-				children.values().forEach(function (c) { queue.push(c) });
-			}
+		function setChildren(children) {
+			_children = children;
 		}
-		return this;
-	}
+		
+		return {
+			data: function(data) {
+				if (!arguments.length) return _data;
+				_data = data;
+				_attrs = _data.length ? d3.map(data[0]).keys() : [];
+				return this;
+			},
+
+	  		attrs: function(attrs) {
+				if (!arguments.length) return _attrs;
+				_attrs = attrs;
+				return this;
+			},
 	
-}
+			label: function(label) {
+				if (!arguments.length) return _label;
+				_label = label;
+				return this;
+			},
+		
+			entropy: function() {
+				return entropy(_data, _label);
+			},
+		
+			split: function() {
+				if (typeof _split === 'undefined') 
+					_split = dtree_split(this, setChildren);
+				return _split;
+			},
+		
+			children: function() {
+				return _children;
+			},
+			
+			gain: function() {
+				if (typeof _children === 'undefined') return 0;
+				var childNodes = this.children().values();
+				var weightedEntropies = childNodes.map(function (child) {
+					return child.data().length * child.entropy();
+				});
+				return this.entropy() - (d3.sum(weightedEntropies) / this.data().length);
+			}
+		};
+	};
+
+	function dtree_split(node, callback) {
+		var _node = node,
+			_attr,
+			_value;
+
+		function continuous(node, attr) {
+			return (typeof node.data()[0][attr] === 'number');
+		}		
+
+		function performSplit(node, attr, value) {
+			var subsets;
+			if (continuous(node, attr)) {
+				subsets = new d3.map();
+				subsets.set('left', node.data().filter(function (d) { return d[attr] <= value; }));
+				subsets.set('right', node.data().filter(function (d) { return d[attr] > value; }));
+			} else {
+				subsets = new d3.map(d3.nest()
+					.key(function (d) { return d[attr]; })
+					.map(node.data()))
+			} 
+			var childAttrs = node.attrs().filter(function (a) { return a !== attr });
+			var children = new d3.map();
+			subsets.forEach(function (value, subset) {
+				var child = dtree_node()
+					.data(subset)
+					.label(node.label())
+					.attrs(childAttrs);
+				children.set(value, child);
+			});
+			return children;
+		}
+			
+		return {
+			attr: function(attr) {
+				if(!arguments.length) return _attr;
+				_attr = attr;
+				return this;
+			},
+		
+			value: function(value) {
+				if (!arguments.length) return _value;
+				_value = value;
+				return this;
+			}, 
+			
+			perform: function() {
+				var children = performSplit(_node, _attr, _value);
+				callback(children);
+				return children;
+			}
+		};
+	};
+	
+	dtree = {};
+	dtree.node = function() {		
+		return dtree_node();
+	}	
+})();
+
+
+
 
 // unit tests
 d3.json('tennis.json', function(data) {
@@ -140,19 +137,7 @@ d3.json('tennis.json', function(data) {
 		d.WINDY = (d.WINDY === "true");
 	});
 	
-	//Node();
-	//Node([], 'PLAY');
-	//Node(data);
-	//Node(data, 'NONSENSE');
-	//Node(data, 'PLAY', ['NONSENSE']);
-	//Node(data, 'PLAY', ['PLAY', 'HUMIDITY']);
-	//Node(data, 'PLAY', ['HUMIDITY', 'WINDY', 'HUMIDITY']);
-	root = new Node(data, 'PLAY');
-	console.log('entropy of root node', root.entropy);
-	root.split('OUTLOOK', 78);
-	console.log('gain from splitting using OUTLOOK', root.computeGain());
-	console.log('splitting on the best attribute', root.bestSplit());
-	console.log('build the best tree automatically', root.buildTree());
+	d = data;
 });
 
 
