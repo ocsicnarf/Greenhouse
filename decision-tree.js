@@ -67,11 +67,11 @@
                 return _split;
             },
         
-            children: function(branch) {
+            children: function(key) {
                 if(!arguments.length) 
                     return _children;
-                else
-                    return _children.get(branch);
+                else if (typeof _children !== 'undefined') 
+                    return _children.get(key);
             },
             
             gain: function() {
@@ -202,7 +202,7 @@ d3.json('tennis.json', function(data) {
     root = dtree.node()
         .data(d)
         .label('PLAY');
-
+	
     queue = [root];
     i = 0;
     while(queue.length > 0 && i < 100) {
