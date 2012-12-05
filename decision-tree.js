@@ -37,7 +37,7 @@
 
         return {
             data: function(data) {
-                if (!arguments.length) return _data;
+                if (!arguments.length) return _data.slice();
                 _data = data;
                 _attrs = _data.length ? d3.map(data[0]).keys() : [];
                 _label = _attrs[0]; 
@@ -45,7 +45,7 @@
             },
 
             attrs: function(attrs) {
-                if (!arguments.length) return _attrs;
+                if (!arguments.length) return _attrs.slice();
                 _attrs = attrs;
                 return this;
             },
