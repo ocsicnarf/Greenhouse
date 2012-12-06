@@ -1,5 +1,5 @@
 (function() {   
-    // expects a dtree_node
+	// expects a dtree_node
     function entropy(node) {
         if (!node.data().length) return 0;
         var frequencies = d3.nest()
@@ -81,7 +81,28 @@
 
             leaf: function() {
                 return this.data().length == 0 || this.attrs().length == 0 || this.entropy() == 0;
-            }
+            },
+			
+			toString: function(level, name) {
+				if (typeof level === 'undefined') level = 0;
+				if (typeof name === 'undefined') name = '';
+				
+				var counts = d3.nest()
+					.key(function (d) { return d[_label]; })
+					.rollup(function (g) { return g.length; })
+					.entries(this.data())
+				
+				var indent = new Array(level + 1).join('\t\t')
+				var description = counts.map(function (c) { return c.key + ': ' + c.values; }).join(', ');
+				var rest = [];
+				if (typeof _children !== 'undefined') {
+					rest.push(indent + '\t' + this.split().attr());
+					_children.forEach(function (attr, child) {
+						rest.push(child.toString(level + 1, attr))
+					});
+				}
+				return indent + name + '[' + description + ']\n' + rest.join('\n');
+			}
         };
     };
 
@@ -189,7 +210,7 @@
 
 
 
-
+/*
 // unit tests
 d3.json('tennis.json', function(data) {
     data.forEach(function(d) {
@@ -217,9 +238,28 @@ d3.json('tennis.json', function(data) {
     }
 
 });
+*/
 
+d3.json('stocks.json', function(data) {
+    d = data;
+    root = dtree.node()
+        .data(d)
+        .label('PROFIT');
+	
+    queue = [root];
+    i = 0;
+    while(queue.length > 0 && i < 100) {
+        i += 1;
+        next = queue.shift();
+        if(!next.leaf()) {
+            children = next.split().best().perform();
+            children.values().forEach(function (c) {
+                queue.push(c);
+            });
+        }
+    }
 
-
+});
 
 
 
