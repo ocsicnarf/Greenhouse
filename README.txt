@@ -16,3 +16,6 @@
 ---Implementation---
 Interaction and visualization -- d3.js?
 Decision tree functions -- write own in js?
+
+
+toy tennis data from http://www.cis.temple.edu/~giorgio/cis587/readings/id3-c45.html
