@@ -1,112 +1,113 @@
-function flipChart() {
-	var margin = {top: 10, right:10, bottom: 10, left: 10},
-		width = 200,
-		height = 60,
-		feature = 'TEMPERATURE',
-		label = 'PLAY',
-		fontSize = 4;
-	
-	function distinct(array, property) {
-		var grouped = d3.nest()
-			.key(function(d) { return d[property]; })
-			.map(array)
-		return d3.map(grouped).keys();
-	} 
-	
-	
-	function get(feature) {
-		return function (d) { return d[feature]; };
-	}
+function histogram() {
+	var margin = {top: 2, right:10, bottom: 2, left: 10},
+		outerWidth = 90,
+		outerHeight = 80,
+		width = outerWidth - margin.left - margin.right,
+		height = outerHeight - margin.top - margin.bottom,
+		color = 'blue',
+		up = true,
+		numBins;
 		
-	function chart(selection) {		
-		selection.each(function(data) {
-			var groups = distinct(data, label).map(function (v) {
-				return data.filter(function (d) { 
-					return d[label] === v;	
-				});
-			});
-			
-			var featureValues = groups.map(function (g) {
-				return g.map(function (e) { return e[feature]; });
-			});
-			
-			selection.selectAll('.placeholder')
-				.data(featureValues)
-			  .enter().append('div')
-				.call(scattergram())
-			
-		});
-	}
-	
-	
-	return chart;
-}
-
-
-// possible to-do's
-// combine nearby values (values within certain tolerance are combined)
-function scattergram() {
-	var margin = {top: 2, right: 12, bottom: 2, left: 12},
-		width = 240 - margin.left - margin.right,
-		height = 30 - margin.top - margin.bottom,
-		color = 'gray',
-		maxRadius = 9;
-	
-	// size based on frequency of data value
-	function radius(data) {
- 		return function(d) {
-			var count = data.filter(function (e) { return e === d; }).length;
-			var prob = data.length ? count / data.length : 0;
-			return maxRadius * Math.sqrt(prob);
+	function findBin(bins) {
+		return function(d) {
+			var result = bins.filter(function(b) { return b.x <= d && d <= (b.x + b.dx); })
+			if (result.length == 1)
+				return result[0];
+			// should never get here
+			console.log(result)
+			bins.filter(function(b) { console.log(b.x, b.x + b.dx, d)})
 		}
 	}
 	
 	function chart(selection) {
 		selection.each(function(data) {
-			console.log(data)
+			// perturb data by tiny amount to break ties
+			data = data.map(function(d, i) { return d +  i * 1e-10; })
 			
-			// get or create our svg element
-			var svg = d3.select(this).selectAll('svg');		
+			// select or create the SVG element
+			var svg  = d3.select(this).select('svg')
 			if (svg.empty()) 
-				svg = d3.select(this).append('svg');
-			svg .attr('width', width + margin.left + margin.right)
-				.attr('height', height + margin.top + margin.bottom);
+				svg = d3.select(this).append('svg')
 			
-			// make the margins
-			var g = svg.select('g');
-			if (g.empty()) 
-				g = svg.append('g')
-			g.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
-
-			var xScale = d3.scale.linear()
+			// select or create the inner group
+			var innerG = svg.select('g')
+			if (innerG.empty())
+				innerG = svg.append('g')
+			
+			// update outer and inner dimensions
+			svg .attr('width', outerWidth)
+				.attr('height', outerHeight)
+			innerG
+				.attr('transform', 'translate(' + margin.left + ','  + margin.top + ')');
+			
+			// set up the histogram layout
+			var hist = d3.layout.histogram()
+				.frequency(false);
+			if (typeof numBins !== 'undefined')
+				hist.bins(numBins);
+			var bins = hist(data);
+			var bin = findBin(bins)
+			
+			// set up scales
+			var x = d3.scale.linear()
 				.domain(d3.extent(data))
 				.range([0, width]);
-			
-			// add points
-			var circles = g.selectAll('.circle')
-				.data(data)
-			 		
-			circles.enter().append('circle')
-				.attr('class', 'circle')
-				.attr('cx', xScale)
-				.attr('cy', 0.5 + height / 2)
-				.attr('r', 0)
-				.attr('fill', color)
-				.attr('stroke', 'black')
-				.attr('stroke-width', 0.3)
-				.style('opacity', 0.7);
-			
-			circles.transition()
-				.duration(1000)
-				.attr('cx', xScale)
-				.attr('fill', color)
-				.attr('r', radius(data))
-			
-			circles.exit().transition()
-				.duration(1000)
-				.attr('r', radius(data))
-				.remove();
 				
+			var y = d3.scale.linear()
+				//.domain([0, d3.max(bins, function(d) { return d.y; })])
+				.domain([0, 1])
+				.range([0, height]);
+		
+			// bind data
+			var bars = innerG.selectAll('.bar').data(bins)
+			var blocks = innerG.selectAll('.block').data(data)
+
+			// enter selection	
+			blocks.enter().append('rect')
+				.attr('class', 'block')
+				.attr('x', function(d) { return x(bin(d).x); })
+				.attr('width', width / bins.length - 0.5)
+				.attr('height', function(d) { 
+					var b = bin(d);
+					return y(b.y) / b.length - 0.5;
+				})
+				.attr('y', function(d) { 
+					var b = bin(d);
+					var pos = b.indexOf(d) + 1;
+					var yy = y(bin(d).y * pos / b.length)
+					return up ? height - yy : yy;
+				})			
+				.attr('fill', color)
+				.style('opacity', 0.5)
+
+			// update selection
+			blocks.transition()
+				.duration(1000)
+				.attr('height', function(d) { 
+					var b = bin(d);
+					return y(b.y) / b.length - 0.5;
+				})
+				.attr('y', function(d) { 
+					var b = bin(d);
+					var pos = b.indexOf(d) + 1;
+					var yy = y(bin(d).y * pos / b.length)
+					return up ? height - yy : yy;
+				})
+							
+			blocks.transition()
+				.delay(1000)
+				.duration(1000)
+				.attr('x', function(d) { return x(bin(d).x); })
+
+			// exit selection
+			blocks.exit().transition()
+				.duration(1000)
+				.style('opacity', 0)
+				.remove()
+
+
+		console.log(bins)
+		
 		});
 	}
 	
@@ -116,26 +117,74 @@ function scattergram() {
 		return chart;
 	}
 	
-	chart.maxRadius = function(_) {
-		if(!arguments.length) return maxRadius;
-		maxRadius = _;
+	chart.up = function(_) {
+		if(!arguments.length) return up;
+		up = _;
 		return chart;
 	}
 	
-	chart.width = function(_) {
-		if(!arguments.length) return width;
-		width = _;
-		return chart;
-	}
-	
-	chart.height = function(_) {
-		if(!arguments.length) return height;
-		height = _;
+	chart.numBins = function(_) {
+		if(!arguments.length) return numBins;
+		numBins = _;
 		return chart;
 	}
 	
 	return chart;
 }
+
+
+// expects an array of two data arrays
+function pairedHistograms() {
+	var margin = {top: 2, right:10, bottom: 2, left: 10},
+		outerWidth = 1000,
+		outerHeight = 500;
+		
+	function chart(selection) {
+		selection.each(function(data) {
+			// select or create the SVG element
+			var svg  = d3.select(this).select('svg')
+			console.log(svg)
+			if (svg.empty()) 
+				svg = d3.select(this).append('svg')
+			
+			// select or create the inner group
+			var innerG = svg.select('g')
+			console.log(innerG)
+			if (innerG.empty())
+				innerG = svg.append('g')
+			
+			// update outer and inner dimensions
+			svg .attr('width', outerWidth)
+				.attr('height', outerHeight)
+			innerG
+				.attr('transform', 'translate(' + margin.left + ','  + margin.top + ')');
+			
+			// bind data and draw individual histograms
+			var innerCharts = innerG.selectAll('.histogram')
+				.data(data)
+				
+			innerCharts.enter().append('svg')
+				.attr('y', function(d, i) { return i * 80; })
+				.attr('class', 'histogram')
+				.each(function (s, i) { 
+					a = d3.select(this)
+					d3.select(this).call(histogram().up(i ^ 1)); 
+				});
+				
+			innerCharts
+				.each(function (s, i) { 
+					a = d3.select(this)
+					d3.select(this).call(histogram().up(i ^ 1)); 
+				});
+		
+		});
+	}
+	
+	return chart;
+}
+
+
+
 
 d3.json('tennis.json', function(data) {
     data.forEach(function(d) {
@@ -143,29 +192,17 @@ d3.json('tennis.json', function(data) {
         d.HUMIDITY = +d.HUMIDITY;
         d.WINDY = (d.WINDY === "true");
     });
-    
-    gd = data; // global for console inspection
+   	
+    h = data.map(function(d) { return d.HUMIDITY; }); // global for console inspection
+    t = data.map(function(d) { return d.TEMPERATURE; }); // global for console inspection
 
-	/*
-	sg = scattergram();
-	data1 = [1,2,1,3,4,5,5,5,5,1,2,7,10];
-	data2 = [2,2,1,8,9,10,12,9,11];
-	svg = d3.select('#chart').selectAll('.placeholder')
-		.data([data1, data2])
-	  .enter().append('div')
-		.attr('class', 'placeholder')
-		.call(sg)
-		
-	data1 = [1,2,3,3,3,3,3,4,5,5,8,8,1,2,8,1]
-	d3.selectAll('.placeholder')
-		.data([data1, data2])
-		.call(sg)
-		*/
-		
-		
 	d3.select('body')
-		.datum(data)
-		.call(flipChart());
+		.datum([h, t])
+		.call(pairedHistograms())
+		
+/*	d3.select('body')
+		.datum(gd)
+		.call(histogram())*/
 });
 
 
